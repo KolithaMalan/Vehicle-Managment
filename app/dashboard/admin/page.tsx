@@ -12,11 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { 
   MapPin, Clock, Check, X, Plus, Users, Car, UserCheck, History, 
   Navigation, Activity, Eye, RefreshCw, MapPinIcon, ArrowLeftRight, 
-  ArrowRight, Gauge, BarChart3, TrendingUp, CheckCircle // ✅ ADDED CheckCircle here
+  ArrowRight, Gauge, BarChart3, TrendingUp, CheckCircle
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LiveLocationModal } from '@/components/LiveTrackingMap';
-
 
 interface User {
   _id: string;
@@ -41,8 +40,23 @@ interface Vehicle {
   isAvailable: boolean;
 }
 
+// ✅ UPDATED: Enhanced interface with new mileage data
 interface VehicleWithMileage extends Vehicle {
   monthlyMileage: number;
+  rideCount: number;
+  userRideCount: number;
+  dailyRideCount: number;
+  lastUpdated: string | null;
+}
+
+// ✅ NEW: Mileage summary interface
+interface MileageSummary {
+  totalVehicles: number;
+  totalMileage: number;
+  activeVehicles: number;
+  availableVehicles: number;
+  month: number;
+  year: number;
 }
 
 interface Ride {
@@ -129,6 +143,7 @@ export default function AdminDashboard() {
   const [drivers, setDrivers] = useState<User[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [vehicleMileages, setVehicleMileages] = useState<VehicleWithMileage[]>([]);
+  const [mileageSummary, setMileageSummary] = useState<MileageSummary | null>(null); // ✅ NEW
   const [loading, setLoading] = useState(true);
   const [liveLoading, setLiveLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('rides');
@@ -148,6 +163,14 @@ export default function AdminDashboard() {
   const [selectedVehicleHistory, setSelectedVehicleHistory] = useState<MileageHistory[]>([]);
   const [selectedVehicleName, setSelectedVehicleName] = useState('');
 
+  // Vehicle management states
+  const [showAddVehicle, setShowAddVehicle] = useState(false);
+  const [newVehicle, setNewVehicle] = useState({
+    terminalId: '',
+    vehicle: '',
+    vehicleType: ''
+  });
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -160,6 +183,22 @@ export default function AdminDashboard() {
     }
   }, [activeTab]);
 
+  // ✅ UPDATED: New efficient mileage fetching function
+  const fetchVehicleMileages = async () => {
+    try {
+      const response = await fetch('/api/vehicles/mileage-summary');
+      if (response.ok) {
+        const data = await response.json();
+        setVehicleMileages(data.vehicles);
+        setMileageSummary(data.summary);
+        console.log('✅ Mileage Summary loaded:', data.summary);
+      }
+    } catch (error) {
+      console.error('Failed to fetch mileage summary:', error);
+    }
+  };
+
+  // ✅ UPDATED: Streamlined fetchData function
   const fetchData = async () => {
     try {
       const [ridesRes, usersRes, devicesRes] = await Promise.all([
@@ -182,49 +221,15 @@ export default function AdminDashboard() {
       if (devicesRes.ok) {
         const devicesData = await devicesRes.json();
         setDevices(devicesData);
-        // Fetch mileage for each vehicle
-        await fetchVehicleMileages(devicesData);
       }
+
+      // ✅ NEW: Efficient single API call for all vehicle mileages
+      await fetchVehicleMileages();
+      
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-    // Vehicle management states
-  const [showAddVehicle, setShowAddVehicle] = useState(false);
-  const [newVehicle, setNewVehicle] = useState({
-    terminalId: '',
-    vehicle: '',
-    vehicleType: ''
-  });
-
-  const fetchVehicleMileages = async (devicesData: Device[]) => {
-    try {
-      const mileagePromises = devicesData.map(async (device) => {
-        try {
-          const response = await fetch(`/api/vehicles/mileage?vehicleId=${device.terminalId}`);
-          if (response.ok) {
-            const data = await response.json();
-            return {
-              ...device,
-              monthlyMileage: data.totalMileage || 0
-            };
-          }
-        } catch (err) {
-          console.error(`Failed to fetch mileage for ${device.terminalId}:`, err);
-        }
-        return {
-          ...device,
-          monthlyMileage: 0
-        };
-      });
-      
-      const mileagesData = await Promise.all(mileagePromises);
-      setVehicleMileages(mileagesData);
-    } catch (error) {
-      console.error('Failed to fetch mileages:', error);
     }
   };
 
@@ -242,6 +247,54 @@ export default function AdminDashboard() {
       setLiveLoading(false);
     }
   };
+
+
+
+
+// ✅ ADD this deleteUser function to your AdminDashboard component
+
+const deleteUser = async (userId: string, userName: string, userEmail: string, userRole: string) => {
+  // Confirmation dialog
+  const confirmMessage = `Are you sure you want to delete user "${userName}" (${userEmail})?\n\nRole: ${userRole}\n\nThis action cannot be undone.`;
+  
+  if (!confirm(confirmMessage)) {
+    return;
+  }
+  
+  // Additional confirmation for admin users
+  if (userRole === 'admin') {
+    const adminConfirm = confirm(`⚠️ WARNING: You are about to delete an ADMIN user!\n\nUser: ${userName}\nEmail: ${userEmail}\n\nThis will permanently remove their admin access. Are you absolutely sure?`);
+    if (!adminConfirm) {
+      return;
+    }
+  }
+
+  try {
+    const response = await fetch(`/api/users?id=${userId}`, {
+      method: 'DELETE',
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      alert(`✅ User "${result.deletedUser.name}" deleted successfully!`);
+      fetchData(); // Refresh the data
+    } else {
+      const error = await response.json();
+      alert(`Failed to delete user: ${error.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error('Failed to delete user:', error);
+    alert('Error deleting user. Please try again.');
+  }
+};
+
+
+
+
+
+
+
+
 
   const fetchMileageHistory = async (vehicleId: string, vehicleName: string) => {
     try {
@@ -379,7 +432,7 @@ export default function AdminDashboard() {
     }
   };
 
-    const addVehicle = async () => {
+  const addVehicle = async () => {
     if (!newVehicle.terminalId || !newVehicle.vehicle || !newVehicle.vehicleType) {
       alert('Please fill all fields');
       return;
@@ -489,11 +542,10 @@ export default function AdminDashboard() {
   const approvedRides = rides.filter(ride => ride.status === 'approved');
   const completedRides = rides.filter(ride => ['completed', 'rejected'].includes(ride.status));
   const availableDevices = devices.filter(device => device.isAvailable && device.status === 'online');
-
   const availableDrivers = drivers.filter(driver => driver.isAvailable !== false);
   
-  // Calculate total monthly mileage
-  const totalMonthlyMileage = vehicleMileages.reduce((sum, v) => sum + v.monthlyMileage, 0);
+  // ✅ UPDATED: Use mileage summary data when available
+  const totalMonthlyMileage = mileageSummary?.totalMileage || vehicleMileages.reduce((sum, v) => sum + v.monthlyMileage, 0);
 
   return (
     <DashboardLayout>
@@ -563,6 +615,8 @@ export default function AdminDashboard() {
                       <SelectContent>
                         <SelectItem value="driver">Driver</SelectItem>
                         <SelectItem value="project_manager">Project Manager</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="user">User</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -575,87 +629,94 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-{/* Statistics Cards */}
-<div className="grid md:grid-cols-7 gap-4">
-  <Card>
-    <CardHeader className="pb-3">
-      <CardTitle className="text-sm font-medium text-gray-600">Pending Approvals</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold text-orange-600">{pendingRides.length}</div>
-      <p className="text-xs text-gray-500">&lt;25km rides</p>
-    </CardContent>
-  </Card>
-  
-  <Card>
-    <CardHeader className="pb-3">
-      <CardTitle className="text-sm font-medium text-gray-600">Live Rides</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold text-blue-600">{liveRides.length}</div>
-    </CardContent>
-  </Card>
-  
-  <Card>
-    <CardHeader className="pb-3">
-      <CardTitle className="text-sm font-medium text-gray-600">Total Drivers</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{drivers.length}</div>
-    </CardContent>
-  </Card>
-  
-  <Card>
-    <CardHeader className="pb-3">
-      <CardTitle className="text-sm font-medium text-gray-600">Available Vehicles</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold text-green-600">{availableDevices.length}</div>
-    </CardContent>
-  </Card>
-  
-  <Card>
-    <CardHeader className="pb-3">
-      <CardTitle className="text-sm font-medium text-gray-600">Active Rides</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">
-        {rides.filter(ride => ['approved', 'assigned', 'in_progress'].includes(ride.status)).length}
-      </div>
-    </CardContent>
-  </Card>
-  
-  <Card>
-    <CardHeader className="pb-3">
-      <CardTitle className="text-sm font-medium text-gray-600">Completed Today</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold text-green-600">
-        {rides.filter(ride => 
-          ride.status === 'completed' && 
-          new Date(ride.createdAt).toDateString() === new Date().toDateString()
-        ).length}
-      </div>
-    </CardContent>
-  </Card>
-  
-  <Card className="bg-gradient-to-br from-purple-50 to-blue-50">
-    <CardHeader className="pb-3">
-      <CardTitle className="text-sm font-medium text-purple-700 flex items-center gap-1">
-        <TrendingUp className="w-4 h-4" />
-        Monthly Mileage
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold text-purple-600">
-        {totalMonthlyMileage.toFixed(1)} km
-      </div>
-      <p className="text-xs text-purple-600">
-        {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-      </p>
-    </CardContent>
-  </Card>
-</div>
+        {/* ✅ ENHANCED: Statistics Cards with Summary Data */}
+        <div className="grid md:grid-cols-7 gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">Pending Approvals</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{pendingRides.length}</div>
+              <p className="text-xs text-gray-500">&lt;25km rides</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">Live Rides</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{liveRides.length}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">Total Drivers</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{drivers.length}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">Available Vehicles</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {mileageSummary?.availableVehicles || availableDevices.length}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">Active Rides</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {rides.filter(ride => ['approved', 'assigned', 'in_progress'].includes(ride.status)).length}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">Completed Today</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {rides.filter(ride => 
+                  ride.status === 'completed' && 
+                  new Date(ride.createdAt).toDateString() === new Date().toDateString()
+                ).length}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-purple-50 to-blue-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-purple-700 flex items-center gap-1">
+                <TrendingUp className="w-4 h-4" />
+                Monthly Mileage
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">
+                {totalMonthlyMileage.toFixed(1)} km
+              </div>
+              <p className="text-xs text-purple-600">
+                {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </p>
+              {mileageSummary && (
+                <p className="text-xs text-purple-500 mt-1">
+                  {mileageSummary.activeVehicles} of {mileageSummary.totalVehicles} vehicles active
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Tabs */}
         <div className="border-b">
@@ -692,7 +753,6 @@ export default function AdminDashboard() {
               <Users className="w-4 h-4 mr-1 inline" />
               User Management
             </button>
-            {/* ✅ NEW: Vehicle Management Tab */}
             <button
               onClick={() => setActiveTab('vehicles')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -704,7 +764,6 @@ export default function AdminDashboard() {
               <Car className="w-4 h-4 mr-1 inline" />
               Vehicle Management
             </button>
-            {/* ✅ NEW: Vehicle Mileage Tab */}
             <button
               onClick={() => setActiveTab('mileage')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -878,77 +937,12 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
-
-            {/* ✅ NEW: Monthly Vehicle Mileage Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Gauge className="w-5 h-5 text-purple-600" />
-                  Monthly Vehicle Mileage
-                </CardTitle>
-                <CardDescription>
-                  Current month mileage for each vehicle - {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Vehicle</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Terminal ID</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Availability</TableHead>
-                      <TableHead>Monthly Mileage</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {vehicleMileages.map((vehicle) => (
-                      <TableRow key={vehicle._id}>
-                        <TableCell className="font-medium">{vehicle.vehicle}</TableCell>
-                        <TableCell>{vehicle.vehicleType}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{vehicle.terminalId}</Badge>
-                        </TableCell>
-                        <TableCell>{getVehicleStatusBadge(vehicle.status)}</TableCell>
-                        <TableCell>
-                          {vehicle.isAvailable ? (
-                            <Badge className="bg-green-100 text-green-800">Available</Badge>
-                          ) : (
-                            <Badge className="bg-red-100 text-red-800">In Use</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Gauge className="w-4 h-4 text-purple-600" />
-                            <span className="font-bold text-purple-600">{vehicle.monthlyMileage.toFixed(1)} km</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => fetchMileageHistory(vehicle.terminalId, vehicle.vehicle)}
-                            className="flex items-center gap-1"
-                          >
-                            <BarChart3 className="w-3 h-3" />
-                            History
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
           </div>
         )}
 
         {/* Ride Management Tab */}
         {activeTab === 'rides' && (
           <div className="space-y-6">
-            {/* ✅ UPDATED: Only >25km rides pending approval */}
             <Card>
               <CardHeader>
                 <CardTitle>Rides Awaiting Admin Approval</CardTitle>
@@ -968,7 +962,7 @@ export default function AdminDashboard() {
                             <h4 className="font-medium">Ride #{ride._id.slice(-6)}</h4>
                             {getTripTypeBadge(ride.tripType)}
                             <Badge className="bg-orange-100 text-orange-800">
-                              Long Distance: {ride.distanceKm.toFixed(1)} km
+                              Short Distance: {ride.distanceKm.toFixed(1)} km
                             </Badge>
                             <p className="text-sm text-gray-600">
                               {new Date(ride.createdAt).toLocaleDateString()}
@@ -976,11 +970,6 @@ export default function AdminDashboard() {
                           </div>
                           {getStatusBadge(ride.status)}
                         </div>
-                        {ride.approval?.projectManager?.approved && (
-                          <div className="mb-3 p-2 bg-blue-50 rounded text-sm text-blue-700">
-                            ✓ PM Approved on {new Date(ride.approval.projectManager.approvedAt).toLocaleDateString()}
-                          </div>
-                        )}
                         <div className="grid md:grid-cols-2 gap-3 mb-3">
                           <div className="flex items-center gap-2">
                             <MapPin className="w-4 h-4 text-green-600" />
@@ -1008,12 +997,11 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* Driver and Vehicle Assignment */}
-             <Card>
+            <Card>
               <CardHeader>
                 <CardTitle>Approved Rides - Driver & Vehicle Assignment</CardTitle>
                 <CardDescription>
-                  {approvedRides.length} approved rides need driver and vehicle assignment (includes PM-approved ≥25km rides and Admin-approved &lt;25km rides)
+                  {approvedRides.length} approved rides need driver and vehicle assignment
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1096,42 +1084,376 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Users Tab */}
-        {activeTab === 'users' && (
+{/* Users Tab */}
+{activeTab === 'users' && (
+  <Card>
+    <CardHeader>
+      <CardTitle>User Management</CardTitle>
+      <CardDescription>
+        Manage drivers, project managers, and admin users
+      </CardDescription>
+    </CardHeader>
+    <CardContent>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {users.filter(user => user.role !== 'user').map((user) => (
+            <TableRow key={user._id}>
+              <TableCell className="font-medium">{user.name}</TableCell>
+              <TableCell>{user.email}</TableCell>
+              <TableCell>
+                <Badge variant="outline" className={
+                  user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                  user.role === 'project_manager' ? 'bg-blue-100 text-blue-800' :
+                  'bg-green-100 text-green-800'
+                }>
+                  {user.role.replace('_', ' ')}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {user.role === 'driver' && (
+                  user.isAvailable !== false ? (
+                    <Badge className="bg-green-100 text-green-800">Available</Badge>
+                  ) : (
+                    <Badge className="bg-yellow-100 text-yellow-800">Busy</Badge>
+                  )
+                )}
+                {user.role !== 'driver' && (
+                  <Badge variant="outline">Active</Badge>
+                )}
+              </TableCell>
+              <TableCell className="text-sm text-gray-500">
+                {new Date(user.createdAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                })}
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  {/* Edit button (placeholder for future functionality) */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled
+                    className="opacity-50"
+                  >
+                    <Eye className="w-3 h-3 mr-1" />
+                    View
+                  </Button>
+                  
+                  {/* Delete button */}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => deleteUser(user._id, user.name, user.email, user.role)}
+                    className="hover:bg-red-600"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Delete
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      
+      {/* Show message if no users */}
+      {users.filter(user => user.role !== 'user').length === 0 && (
+        <div className="text-center py-8">
+          <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-600 mb-2">No staff users found</h3>
+          <p className="text-gray-500">Create your first driver or project manager account</p>
+        </div>
+      )}
+    </CardContent>
+  </Card>
+)}
+
+        {/* Vehicle Management Tab */}
+        {activeTab === 'vehicles' && (
           <Card>
             <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>
-                Manage drivers and project managers
-              </CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Vehicle Management</CardTitle>
+                  <CardDescription>
+                    Add, view, and manage vehicles
+                  </CardDescription>
+                </div>
+                <Dialog open={showAddVehicle} onOpenChange={setShowAddVehicle}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Vehicle
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Vehicle</DialogTitle>
+                      <DialogDescription>
+                        Enter vehicle details to add to the fleet
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="terminalId">Terminal ID</Label>
+                        <Input
+                          id="terminalId"
+                          placeholder="e.g., TERM001"
+                          value={newVehicle.terminalId}
+                          onChange={(e) => setNewVehicle({ ...newVehicle, terminalId: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="vehicle">Vehicle Name</Label>
+                        <Input
+                          id="vehicle"
+                          placeholder="e.g., Toyota Hiace"
+                          value={newVehicle.vehicle}
+                          onChange={(e) => setNewVehicle({ ...newVehicle, vehicle: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="vehicleType">Vehicle Type</Label>
+                        <Select 
+                          value={newVehicle.vehicleType} 
+                          onValueChange={(value) => setNewVehicle({ ...newVehicle, vehicleType: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Van">Van</SelectItem>
+                            <SelectItem value="Car">Car</SelectItem>
+                            <SelectItem value="Truck">Truck</SelectItem>
+                            <SelectItem value="Bus">Bus</SelectItem>
+                            <SelectItem value="SUV">SUV</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button onClick={addVehicle} className="w-full">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Vehicle
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead>Terminal ID</TableHead>
+                    <TableHead>Vehicle Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Availability</TableHead>
+                    <TableHead>Speed</TableHead>
+                    <TableHead>Last Update</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.filter(user => user.role !== 'user').map((user) => (
-                    <TableRow key={user._id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {user.role.replace('_', ' ')}
-                        </Badge>
+                  {devices.map((device) => (
+                    <TableRow key={device._id}>
+                      <TableCell className="font-medium">
+                        <Badge variant="outline">{device.terminalId}</Badge>
                       </TableCell>
-                      <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-medium">{device.vehicle}</TableCell>
+                      <TableCell>{device.vehicleType}</TableCell>
+                      <TableCell>{getVehicleStatusBadge(device.status)}</TableCell>
+                      <TableCell>
+                        {device.isAvailable ? (
+                          <Badge className="bg-green-100 text-green-800">Available</Badge>
+                        ) : (
+                          <Badge className="bg-red-100 text-red-800">In Use</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>{device.speed} km/h</TableCell>
+                      <TableCell className="text-xs text-gray-500">{device.lastMessage}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteVehicle(device._id, device.vehicle)}
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          Delete
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
+        )}
+
+        {/* ✅ ENHANCED: Vehicle Mileage Tab with Summary */}
+        {activeTab === 'mileage' && (
+          <div className="space-y-6">
+            {/* Enhanced Summary Cards */}
+            {mileageSummary && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">Total Fleet Mileage</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {mileageSummary.totalMileage.toFixed(1)} km
+                    </div>
+                    <p className="text-xs text-purple-600">This Month</p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">Active Vehicles</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {mileageSummary.activeVehicles}
+                    </div>
+                    <p className="text-xs text-gray-500">Out of {mileageSummary.totalVehicles}</p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">Average Mileage</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {mileageSummary.totalVehicles > 0 ? (mileageSummary.totalMileage / mileageSummary.totalVehicles).toFixed(1) : '0'} km
+                    </div>
+                    <p className="text-xs text-gray-500">Per Vehicle</p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">Available Now</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {mileageSummary.availableVehicles}
+                    </div>
+                    <p className="text-xs text-gray-500">Ready for rides</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Enhanced Vehicle Mileage Table */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Gauge className="w-5 h-5 text-purple-600" />
+                      Vehicle Mileage Tracking
+                    </CardTitle>
+                    <CardDescription>
+                      Current month mileage for each vehicle - {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={fetchVehicleMileages}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Refresh Mileage
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Vehicle</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Terminal ID</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Availability</TableHead>
+                      <TableHead>Monthly Mileage</TableHead>
+                      <TableHead>Ride Breakdown</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {vehicleMileages
+                      .sort((a, b) => b.monthlyMileage - a.monthlyMileage) // Sort by highest mileage first
+                      .map((vehicle) => (
+                      <TableRow key={vehicle._id}>
+                        <TableCell className="font-medium">{vehicle.vehicle}</TableCell>
+                        <TableCell>{vehicle.vehicleType}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{vehicle.terminalId}</Badge>
+                        </TableCell>
+                        <TableCell>{getVehicleStatusBadge(vehicle.status)}</TableCell>
+                        <TableCell>
+                          {vehicle.isAvailable ? (
+                            <Badge className="bg-green-100 text-green-800">Available</Badge>
+                          ) : (
+                            <Badge className="bg-red-100 text-red-800">In Use</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Gauge className="w-4 h-4 text-purple-600" />
+                            <span className="font-bold text-purple-600 text-lg">
+                              {vehicle.monthlyMileage.toFixed(1)} km
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {vehicle.rideCount || 0} total rides
+                              </Badge>
+                            </div>
+                            {vehicle.rideCount > 0 && (
+                              <div className="text-gray-500">
+                                <div>👤 {vehicle.userRideCount || 0} user rides</div>
+                                <div>🚌 {vehicle.dailyRideCount || 0} daily rides</div>
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchMileageHistory(vehicle.terminalId, vehicle.vehicle)}
+                            className="flex items-center gap-1"
+                          >
+                            <BarChart3 className="w-3 h-3" />
+                            History
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* History Tab */}
@@ -1391,71 +1713,6 @@ export default function AdminDashboard() {
           </Card>
         )}
 
-        {/* ✅ NEW: Vehicle Mileage Tab */}
-        {activeTab === 'mileage' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Gauge className="w-5 h-5 text-purple-600" />
-                Vehicle Mileage Tracking
-              </CardTitle>
-              <CardDescription>
-                Current month mileage for each vehicle - {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Vehicle</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Terminal ID</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Availability</TableHead>
-                    <TableHead>Current Month Mileage</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vehicleMileages.map((vehicle) => (
-                    <TableRow key={vehicle._id}>
-                      <TableCell className="font-medium">{vehicle.vehicle}</TableCell>
-                      <TableCell>{vehicle.vehicleType}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{vehicle.terminalId}</Badge>
-                      </TableCell>
-                      <TableCell>{getVehicleStatusBadge(vehicle.status)}</TableCell>
-                      <TableCell>
-                        {vehicle.isAvailable ? (
-                          <Badge className="bg-green-100 text-green-800">Available</Badge>
-                        ) : (
-                          <Badge className="bg-red-100 text-red-800">In Use</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Gauge className="w-4 h-4 text-purple-600" />
-                          <span className="font-bold text-purple-600 text-lg">{vehicle.monthlyMileage.toFixed(1)} km</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fetchMileageHistory(vehicle.terminalId, vehicle.vehicle)}
-                          className="flex items-center gap-1"
-                        >
-                          <BarChart3 className="w-3 h-3" />
-                          View History
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
 
 
 
