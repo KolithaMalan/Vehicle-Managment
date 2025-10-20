@@ -245,7 +245,7 @@ export default function LoginPage() {
           />
         </div>
       </div>
-
+{/* Animations */}
       {/* Animations */}
       <style jsx global>{`
         @keyframes blob {
