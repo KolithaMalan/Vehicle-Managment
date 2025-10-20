@@ -13,112 +13,19 @@ import {
   Loader2, 
   Shield, 
   MapPin, 
-  Clock,
-  CheckCircle,
   ArrowRight,
   Eye,
   EyeOff,
   Mail,
   Lock,
   User,
-  Zap,
+  CheckCircle,
   Globe,
-  BarChart3
+  BarChart3,
+  Zap,
+  Clock,
+  Home
 } from 'lucide-react';
-
-// Move components outside to prevent re-creation on each render
-const SystemBrand = () => (
-  <div className="h-full flex flex-col justify-center space-y-8 text-white">
-    <div className="text-center">
-      <div className="flex items-center justify-center mb-6">
-        <div className="w-16 h-16 bg-white bg-opacity-20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-          <Truck className="w-9 h-9 text-white" />
-        </div>
-      </div>
-      <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-        RideManager
-      </h1>
-      <p className="text-xl md:text-2xl text-blue-100 font-light max-w-md mx-auto">
-        Smart Fleet Management for the Modern World
-      </p>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-      <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-6 border border-white border-opacity-20">
-        <MapPin className="w-8 h-8 text-blue-200 mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Real-time Tracking</h3>
-        <p className="text-blue-100 text-sm">Live GPS monitoring and route optimization for your entire fleet.</p>
-      </div>
-
-      <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-6 border border-white border-opacity-20">
-        <Shield className="w-8 h-8 text-blue-200 mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Enterprise Security</h3>
-        <p className="text-blue-100 text-sm">Bank-level security with advanced encryption and compliance.</p>
-      </div>
-
-      <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-6 border border-white border-opacity-20">
-        <BarChart3 className="w-8 h-8 text-blue-200 mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Analytics Dashboard</h3>
-        <p className="text-blue-100 text-sm">Comprehensive insights and reporting for data-driven decisions.</p>
-      </div>
-
-      <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-6 border border-white border-opacity-20">
-        <Zap className="w-8 h-8 text-blue-200 mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Instant Deployment</h3>
-        <p className="text-blue-100 text-sm">Quick setup and seamless integration with existing systems.</p>
-      </div>
-    </div>
-
-    <div className="text-center space-y-4">
-      <div className="flex items-center justify-center space-x-8 text-blue-200">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-white">99.9%</div>
-          <div className="text-sm">Uptime</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-white">500K+</div>
-          <div className="text-sm">Users</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-white">24/7</div>
-          <div className="text-sm">Support</div>
-        </div>
-      </div>
-      <div className="flex items-center justify-center space-x-2 text-blue-200">
-        <Globe className="w-4 h-4" />
-        <span className="text-sm">Trusted by companies in 50+ countries</span>
-      </div>
-    </div>
-  </div>
-);
-
-const MobileBrandHeader = () => (
-  <div className="text-center lg:hidden">
-    <div className="flex items-center justify-center mb-4">
-      <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-        <Truck className="w-7 h-7 text-white" />
-      </div>
-      <span className="text-2xl font-bold text-gray-900 ml-3">RideManager</span>
-    </div>
-  </div>
-);
-
-const TrustBadges = () => (
-  <div className="flex items-center justify-center space-x-6 text-gray-400 text-sm">
-    <div className="flex items-center">
-      <Shield className="w-4 h-4 mr-1" />
-      <span>Secure</span>
-    </div>
-    <div className="flex items-center">
-      <CheckCircle className="w-4 h-4 mr-1" />
-      <span>Verified</span>
-    </div>
-    <div className="flex items-center">
-      <Clock className="w-4 h-4 mr-1" />
-      <span>24/7 Support</span>
-    </div>
-  </div>
-);
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -184,18 +91,101 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden">
+      {/* Animated Background Blobs */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div className="absolute top-0 right-0 w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+
       {/* Desktop Layout */}
-      <div className="hidden lg:flex min-h-screen">
-        {/* Left Side - System Brand */}
-        <div className="flex-1 bg-blue-500 p-12 flex items-center justify-center">
-          <div className="max-w-2xl w-full">
-            <SystemBrand />
+      <div className="hidden lg:grid lg:grid-cols-2 min-h-screen relative">
+        {/* Left Side - Branding & Features */}
+        <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-12 flex items-center justify-center relative overflow-hidden">
+          {/* Pattern Overlay */}
+          <div className="absolute inset-0 opacity-10"
+               style={{
+                 backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+               }}></div>
+
+          <div className="max-w-xl w-full relative z-10 space-y-10">
+            {/* Logo & Title */}
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-6">
+                <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center shadow-2xl">
+                  <Truck className="w-11 h-11 text-white" />
+                </div>
+              </div>
+              <h1 className="text-5xl font-bold text-white mb-4">
+                Lakdhanavi
+              </h1>
+              <p className="text-2xl text-blue-100 font-light">
+                Vehicle Management System
+              </p>
+              <p className="text-lg text-blue-200 mt-3">
+                Empowering Sri Lanka's Utility Services
+              </p>
+            </div>
+
+            {/* Feature Cards Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              <FeatureBox
+                icon={<MapPin className="w-7 h-7" />}
+                title="Real-Time Tracking"
+                description="GPS monitoring & route optimization"
+              />
+              <FeatureBox
+                icon={<Shield className="w-7 h-7" />}
+                title="Enterprise Security"
+                description="Bank-level data protection"
+              />
+              <FeatureBox
+                icon={<BarChart3 className="w-7 h-7" />}
+                title="Advanced Analytics"
+                description="Comprehensive reporting"
+              />
+              <FeatureBox
+                icon={<Zap className="w-7 h-7" />}
+                title="Instant Updates"
+                description="Real-time notifications"
+              />
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-6 bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-white">500+</div>
+                <div className="text-sm text-blue-100">Vehicles</div>
+              </div>
+              <div className="text-center border-x border-white/20">
+                <div className="text-3xl font-bold text-white">99.9%</div>
+                <div className="text-sm text-blue-100">Uptime</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-white">24/7</div>
+                <div className="text-sm text-blue-100">Support</div>
+              </div>
+            </div>
+
+            {/* Trust Badge */}
+            <div className="flex items-center justify-center space-x-2 text-blue-100">
+              <Globe className="w-5 h-5" />
+              <span className="text-sm font-medium">Copyright 2025 © Vehicle Management System</span>
+            </div>
           </div>
         </div>
 
-        {/* Right Side - Auth Form */}
-        <div className="flex-1 bg-white p-12 flex items-center justify-center">
+        {/* Right Side - Login Form */}
+        <div className="bg-white p-12 flex items-center justify-center relative">
+          {/* Back to Home Button */}
+          <Button
+            variant="ghost"
+            onClick={() => router.push('/')}
+            className="absolute top-8 left-8 text-gray-600 hover:text-blue-600"
+          >
+            <Home className="w-4 h-4 mr-2" />
+            Back to Home
+          </Button>
+
           <div className="w-full max-w-md">
             <AuthForm
               isLogin={isLogin}
@@ -212,27 +202,36 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Mobile & Tablet Layout */}
-      <div className="lg:hidden min-h-screen">
-        {/* Top Section - Brand (Mobile) */}
-        <div className="bg-blue-500 px-6 py-12 text-center">
-          <div className="max-w-sm mx-auto">
+      {/* Mobile Layout */}
+      <div className="lg:hidden min-h-screen relative">
+        {/* Mobile Header with Gradient */}
+        <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 px-6 pt-8 pb-12">
+          <Button
+            variant="ghost"
+            onClick={() => router.push('/')}
+            className="text-white hover:bg-white/10 mb-8"
+          >
+            <Home className="w-4 h-4 mr-2" />
+            Back to Home
+          </Button>
+
+          <div className="text-center">
             <div className="flex items-center justify-center mb-6">
-              <div className="w-16 h-16 bg-white bg-opacity-20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg">
                 <Truck className="w-9 h-9 text-white" />
               </div>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              RideManager
+            <h1 className="text-3xl font-bold text-white mb-2">
+              Lakdhanavi
             </h1>
             <p className="text-lg text-blue-100">
-              Smart Fleet Management Platform
+              Vehicle Management System
             </p>
           </div>
         </div>
 
-        {/* Bottom Section - Form */}
-        <div className="bg-white px-6 py-12 min-h-screen">
+        {/* Mobile Form */}
+        <div className="bg-white px-6 py-8 min-h-screen -mt-6 rounded-t-3xl relative">
           <AuthForm
             isLogin={isLogin}
             showPassword={showPassword}
@@ -247,19 +246,43 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Background Pattern */}
-      <div className="hidden lg:block absolute inset-0 pointer-events-none">
-        <div className="absolute left-0 top-0 w-1/2 h-full bg-blue-500 opacity-5"
-             style={{
-               backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-             }}>
-        </div>
-      </div>
+      {/* Animations */}
+      <style jsx global>{`
+        @keyframes blob {
+          0%, 100% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </div>
   );
 }
 
-// Separate AuthForm component with proper props
+// Feature Box Component for Left Panel
+interface FeatureBoxProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}
+
+const FeatureBox = ({ icon, title, description }: FeatureBoxProps) => (
+  <div className="bg-white/10 backdrop-blur-md rounded-xl p-5 border border-white/20 hover:bg-white/15 transition-all duration-300">
+    <div className="text-blue-100 mb-3">{icon}</div>
+    <h3 className="text-white font-semibold text-sm mb-1">{title}</h3>
+    <p className="text-blue-200 text-xs leading-relaxed">{description}</p>
+  </div>
+);
+
+// Auth Form Component
 interface AuthFormProps {
   isLogin: boolean;
   showPassword: boolean;
@@ -287,153 +310,159 @@ const AuthForm = ({
   onTogglePassword,
   onToggleMode
 }: AuthFormProps) => (
-  <div className="h-full flex flex-col justify-center">
-    <div className="w-full max-w-md mx-auto space-y-8">
-      {/* Mobile Brand Header */}
-      <MobileBrandHeader />
-
-      {/* Form Header */}
-      <div className="text-center">
-        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+  <div className="space-y-8">
+    {/* Form Header */}
+    <div className="text-center">
+      <h2 className="text-4xl font-bold mb-3">
+        <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
           {isLogin ? 'Welcome Back' : 'Create Account'}
-        </h2>
-        <p className="text-gray-600 text-lg">
-          {isLogin 
-            ? 'Sign in to access your dashboard' 
-            : 'Join thousands of satisfied users'
-          }
-        </p>
-      </div>
+        </span>
+      </h2>
+      <p className="text-gray-600 text-lg">
+        {isLogin 
+          ? 'Sign in to access your dashboard' 
+          : 'Join our fleet management platform'
+        }
+      </p>
+    </div>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert variant="destructive" className="border-red-200 bg-red-50">
-          <AlertCircle className="h-5 w-5" />
-          <AlertDescription className="text-red-700 font-medium">{error}</AlertDescription>
-        </Alert>
-      )}
+    {/* Error Alert */}
+    {error && (
+      <Alert variant="destructive" className="border-red-200 bg-red-50 animate-shake">
+        <AlertCircle className="h-5 w-5" />
+        <AlertDescription className="text-red-700 font-medium">{error}</AlertDescription>
+      </Alert>
+    )}
 
-      {/* Form */}
-      <Card className="border-0 shadow-xl">
-        <CardContent className="p-8">
-          <form onSubmit={onSubmit} className="space-y-6">
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-semibold text-gray-700">
-                  Full Name
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input
-                    id="name"
-                    name="name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={formData.name}
-                    onChange={onInputChange('name')}
-                    required={!isLogin}
-                    className="h-14 pl-12 text-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
-                    autoComplete="name"
-                  />
-                </div>
-              </div>
-            )}
-
+    {/* Form Card */}
+    <Card className="border-2 border-gray-200 shadow-xl hover:shadow-2xl transition-shadow duration-300">
+      <CardContent className="p-8">
+        <form onSubmit={onSubmit} className="space-y-6">
+          {/* Name Field (Register Only) */}
+          {!isLogin && (
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
-                Email Address
+              <Label htmlFor="name" className="text-sm font-semibold text-gray-700 flex items-center">
+                <User className="w-4 h-4 mr-2 text-purple-600" />
+                Full Name
               </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-xl opacity-0 group-hover:opacity-10 transition-opacity"></div>
                 <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email address"
-                  value={formData.email}
-                  onChange={onInputChange('email')}
-                  required
-                  className="h-14 pl-12 text-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
-                  autoComplete="email"
+                  id="name"
+                  name="name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={formData.name}
+                  onChange={onInputChange('name')}
+                  required={!isLogin}
+                  className="h-12 pl-4 text-base border-2 border-gray-300 focus:border-purple-500 focus:ring-purple-500 rounded-xl relative"
+                  autoComplete="name"
                 />
               </div>
             </div>
+          )}
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
-                Password
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={onInputChange('password')}
-                  required
-                  className="h-14 pl-12 pr-12 text-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
-                  autoComplete={isLogin ? "current-password" : "new-password"}
-                />
-                <button
-                  type="button"
-                  onClick={onTogglePassword}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
+          {/* Email Field */}
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-semibold text-gray-700 flex items-center">
+              <Mail className="w-4 h-4 mr-2 text-blue-600" />
+              Email Address
+            </Label>
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-xl opacity-0 group-hover:opacity-10 transition-opacity"></div>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="you@example.com"
+                value={formData.email}
+                onChange={onInputChange('email')}
+                required
+                className="h-12 pl-4 text-base border-2 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-xl relative"
+                autoComplete="email"
+              />
             </div>
+          </div>
 
-            {isLogin && (
-              <div className="text-right">
-                <button
-                  type="button"
-                  className="text-blue-500 hover:text-blue-600 text-sm font-medium transition-colors"
-                >
-                  Forgot your password?
-                </button>
+          {/* Password Field */}
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-semibold text-gray-700 flex items-center">
+              <Lock className="w-4 h-4 mr-2 text-pink-600" />
+              Password
+            </Label>
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-xl opacity-0 group-hover:opacity-10 transition-opacity"></div>
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={onInputChange('password')}
+                required
+                className="h-12 pl-4 pr-12 text-base border-2 border-gray-300 focus:border-pink-500 focus:ring-pink-500 rounded-xl relative"
+                autoComplete={isLogin ? "current-password" : "new-password"}
+              />
+              <button
+                type="button"
+                onClick={onTogglePassword}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <Button 
+            type="submit" 
+            className="w-full h-12 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-semibold text-base rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-xl" 
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="flex items-center justify-center">
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                {isLogin ? 'Signing In...' : 'Creating Account...'}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center">
+                {isLogin ? 'Sign In' : 'Create Account'}
+                <ArrowRight className="w-5 h-5 ml-2" />
               </div>
             )}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
 
-            <Button 
-              type="submit" 
-              className="w-full h-14 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-lg rounded-xl transition-all duration-200 transform hover:scale-[1.02]" 
-              disabled={loading}
-            >
-              {loading ? (
-                <div className="flex items-center">
-                  <Loader2 className="w-5 h-5 mr-3 animate-spin" />
-                  {isLogin ? 'Signing In...' : 'Creating Account...'}
-                </div>
-              ) : (
-                <div className="flex items-center justify-center">
-                  {isLogin ? 'Sign In' : 'Create Account'}
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </div>
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    {/* Toggle Login/Register */}
+    <div className="text-center">
+      <p className="text-gray-600 mb-3">
+        {isLogin ? "Don't have an account?" : 'Already have an account?'}
+      </p>
+      <button
+        type="button"
+        onClick={onToggleMode}
+        className="text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text font-semibold text-lg hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 transition-all"
+      >
+        {isLogin ? 'Create new account →' : '← Sign in instead'}
+      </button>
+    </div>
 
-      {/* Switch Form Type */}
-      <div className="text-center">
-        <p className="text-gray-600 mb-4">
-          {isLogin ? "Don't have an account?" : 'Already have an account?'}
-        </p>
-        <button
-          type="button"
-          onClick={onToggleMode}
-          className="text-blue-500 hover:text-blue-600 font-semibold text-lg transition-colors duration-200"
-        >
-          {isLogin ? 'Create new account' : 'Sign in instead'}
-        </button>
+    {/* Trust Badges */}
+    <div className="flex items-center justify-center flex-wrap gap-6 text-gray-500 text-sm pt-4">
+      <div className="flex items-center">
+        <Shield className="w-4 h-4 mr-1.5 text-green-600" />
+        <span>Secure</span>
       </div>
-
-      {/* Trust Badges */}
-      <TrustBadges />
+      <div className="flex items-center">
+        <CheckCircle className="w-4 h-4 mr-1.5 text-blue-600" />
+        <span>Verified</span>
+      </div>
+      <div className="flex items-center">
+        <Clock className="w-4 h-4 mr-1.5 text-purple-600" />
+        <span>24/7 Support</span>
+      </div>
     </div>
   </div>
 );
