@@ -1,4 +1,4 @@
-// app/api/rides/[id]/assign/route.ts
+// app/api/rides/[id]/assign/route.ts - COMPLETE VERSION
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import { RideModel, DeviceModel, UserModel } from '@/lib/models';
@@ -6,7 +6,7 @@ import { verifyToken } from '@/lib/auth';
 import { 
   sendDriverAssignmentToUser, 
   sendDriverAssignmentToPM,
-  sendAssignmentNotificationToDriver  // ✅ ADD THIS
+  sendAssignmentNotificationToDriver
 } from '@/lib/email';
 
 export async function POST(
@@ -56,129 +56,118 @@ export async function POST(
       }, { status: 400 });
     }
 
-    // Check if vehicle is available
     const vehicle = await DeviceModel.findOne({ terminalId: vehicleId });
     if (!vehicle) {
       return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
     }
 
-    if (!vehicle.isAvailable) {
-      return NextResponse.json({ error: 'Vehicle is not available' }, { status: 400 });
+    if (vehicle.vehicleStatus === 'busy') {
+      return NextResponse.json({ error: 'Vehicle is currently busy on another ride' }, { status: 400 });
     }
 
-    // Get driver details
     const driver = await UserModel.findById(driverId);
     if (!driver) {
       return NextResponse.json({ error: 'Driver not found' }, { status: 404 });
     }
 
-    // Update ride
-    // Update ride
+    if (driver.driverStatus === 'busy') {
+      return NextResponse.json({ error: 'Driver is currently busy on another ride' }, { status: 400 });
+    }
+
+    const user = await UserModel.findById(ride.userId);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     ride.driverId = driverId;
     ride.vehicleId = vehicleId;
     ride.status = 'assigned';
     ride.assignedAt = new Date();
-    
     await ride.save();
 
-    // ✅ DON'T mark as unavailable on assignment
-    // Driver and vehicle will be marked unavailable when driver clicks "Start Ride"
+    await UserModel.findByIdAndUpdate(driverId, { 
+      isAvailable: true,
+      driverStatus: 'pending' 
+    });
+    console.log(`✅ Driver ${driverId} marked as PENDING`);
     
-    console.log('✅ Driver and vehicle assigned (remaining available until ride starts)');
+    await DeviceModel.findOneAndUpdate({ terminalId: vehicleId }, { 
+      isAvailable: true,
+      vehicleStatus: 'assigned' 
+    });
+    console.log(`✅ Vehicle ${vehicleId} marked as ASSIGNED`);
 
-// ==================== SEND NOTIFICATIONS ====================
-setImmediate(async () => {
-  try {
-    const user = await UserModel.findById(ride.userId);
-    
-    if (user && user.email) {
-      // 1. Notify User: "Driver X and Vehicle Y assigned"
-      await sendDriverAssignmentToUser({
-        rideId: ride._id.toString(),
-        userName: user.name,
-        userEmail: user.email,
-        driverName: driver.name,
-        driverEmail: driver.email,
-        vehicleName: vehicle.vehicle,
-        vehicleType: vehicle.vehicleType,
-        vehicleNumber: vehicle.terminalId,
-        pickupLocation: ride.startLocation.address,
-        dropoffLocation: ride.endLocation.address,
-        requestedDate: new Date(ride.createdAt).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        }),
-        requestedTime: new Date(ride.createdAt).toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        distanceKm: ride.distanceKm.toFixed(1),
-        tripType: ride.tripType === 'return-trip' ? 'Return Trip' : 'One-Way',
-      });
-      console.log('✅ Driver assignment notification sent to user');
-    }
-    
-    // ✅ 2. NEW: Notify DRIVER that they've been assigned
-    await sendAssignmentNotificationToDriver({
-      driverName: driver.name,
-      driverEmail: driver.email,
-      rideId: ride._id.toString(),
-      userName: user?.name || 'Unknown User',
-      userEmail: user?.email || '',
-      pickupLocation: ride.startLocation.address,
-      dropoffLocation: ride.endLocation.address,
-      distanceKm: ride.distanceKm.toFixed(1),
-      tripType: ride.tripType === 'return-trip' ? 'Return Trip' : 'One-Way',
-      vehicleName: vehicle.vehicle,
-      vehicleType: vehicle.vehicleType,
-      vehicleNumber: vehicle.terminalId,
-      requestedDate: new Date(ride.createdAt).toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }),
-      requestedTime: new Date(ride.createdAt).toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
+    setImmediate(async () => {
+      try {
+        await sendDriverAssignmentToUser({
+          rideId: ride._id.toString(),
+          userName: user.name,
+          userEmail: user.email,
+          driverName: driver.name,
+          driverEmail: driver.email,
+          vehicleName: vehicle.vehicle,
+          vehicleType: vehicle.vehicleType,
+          vehicleNumber: vehicle.terminalId,
+          pickupLocation: ride.startLocation.address,
+          dropoffLocation: ride.endLocation.address,
+          requestedDate: new Date(ride.createdAt).toLocaleDateString('en-US', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+          }),
+          requestedTime: new Date(ride.createdAt).toLocaleTimeString('en-US', {
+            hour: '2-digit', minute: '2-digit'
+          }),
+          distanceKm: ride.distanceKm.toFixed(1),
+          tripType: ride.tripType === 'return-trip' ? 'Return Trip' : 'One-Way',
+        });
+        console.log(`✅ User notification sent to: ${user.email}`);
+        
+        await sendAssignmentNotificationToDriver({
+          driverName: driver.name,
+          driverEmail: driver.email,
+          rideId: ride._id.toString(),
+          userName: user.name,
+          userEmail: user.email,
+          pickupLocation: ride.startLocation.address,
+          dropoffLocation: ride.endLocation.address,
+          distanceKm: ride.distanceKm.toFixed(1),
+          tripType: ride.tripType === 'return-trip' ? 'Return Trip' : 'One-Way',
+          vehicleName: vehicle.vehicle,
+          vehicleType: vehicle.vehicleType,
+          vehicleNumber: vehicle.terminalId,
+          requestedDate: new Date(ride.createdAt).toLocaleDateString('en-US', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+          }),
+          requestedTime: new Date(ride.createdAt).toLocaleTimeString('en-US', {
+            hour: '2-digit', minute: '2-digit'
+          }),
+        });
+        console.log(`✅ Driver notification sent to: ${driver.email}`);
+        
+        await sendDriverAssignmentToPM({
+          rideId: ride._id.toString(),
+          userName: user.name,
+          userEmail: user.email,
+          driverName: driver.name,
+          driverEmail: driver.email,
+          vehicleName: vehicle.vehicle,
+          vehicleType: vehicle.vehicleType,
+          vehicleNumber: vehicle.terminalId,
+          pickupLocation: ride.startLocation.address,
+          dropoffLocation: ride.endLocation.address,
+          requestedDate: new Date(ride.createdAt).toLocaleDateString('en-US', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+          }),
+          requestedTime: new Date(ride.createdAt).toLocaleTimeString('en-US', {
+            hour: '2-digit', minute: '2-digit'
+          }),
+          distanceKm: ride.distanceKm.toFixed(1),
+          tripType: ride.tripType === 'return-trip' ? 'Return Trip' : 'One-Way',
+        });
+        console.log('✅ PM notification sent');
+      } catch (emailError) {
+        console.error('⚠️ Email notification error:', emailError);
+      }
     });
-    console.log(`✅ Driver assignment notification sent to ${driver.name} (${driver.email})`);
-    
-    // 3. Notify PM (for all rides)
-    await sendDriverAssignmentToPM({
-      rideId: ride._id.toString(),
-      userName: user?.name || 'Unknown User',
-      userEmail: user?.email || '',
-      driverName: driver.name,
-      driverEmail: driver.email,
-      vehicleName: vehicle.vehicle,
-      vehicleType: vehicle.vehicleType,
-      vehicleNumber: vehicle.terminalId,
-      pickupLocation: ride.startLocation.address,
-      dropoffLocation: ride.endLocation.address,
-      requestedDate: new Date(ride.createdAt).toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }),
-      requestedTime: new Date(ride.createdAt).toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
-      distanceKm: ride.distanceKm.toFixed(1),
-      tripType: ride.tripType === 'return-trip' ? 'Return Trip' : 'One-Way',
-    });
-    console.log('✅ Driver assignment notification sent to PM');
-    
-  } catch (emailError) {
-    console.error('⚠️ Email notification error:', emailError);
-  }
-});
-    // ============================================================
 
     return NextResponse.json(ride);
   } catch (error) {
@@ -186,4 +175,3 @@ setImmediate(async () => {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
-

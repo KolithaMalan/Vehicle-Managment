@@ -1,10 +1,13 @@
+// lib/types.ts - COMPLETE VERSION
+
 export interface User {
   _id?: string;
   name: string;
   email: string;
   passwordHash: string;
   role: 'user' | 'driver' | 'project_manager' | 'admin';
-  isAvailable?: boolean; // ✅ NEW: Driver availability
+  isAvailable?: boolean; // true = Available, false = Busy
+  driverStatus?: 'available' | 'pending' | 'busy'; // ✅ NEW: Detailed status
   createdAt: Date;
 }
 
@@ -99,13 +102,14 @@ export interface Device {
   terminalId: string;
   vehicle: string;
   vehicleType: string;
-  status: string;
+  status: string; // online/offline/idle
   latitude: string;
   longitude: string;
   speed: number;
   lastMessage: string;
   expire: string;
-  isAvailable?: boolean;
+  isAvailable: boolean; // ✅ true = Available, false = Busy
+  vehicleStatus?: 'available' | 'assigned' | 'busy'; // ✅ NEW: Detailed status
 }
 
 export interface DeviceApiResponse {

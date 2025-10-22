@@ -24,6 +24,7 @@ interface User {
   role: string;
   createdAt: string;
   isAvailable?: boolean;
+  driverStatus?: 'available' | 'pending' | 'busy'; // ✅ NEW
 }
 
 interface Vehicle {
@@ -38,9 +39,9 @@ interface Vehicle {
   lastMessage: string;
   expire: string;
   isAvailable: boolean;
+  vehicleStatus?: 'available' | 'assigned' | 'busy'; // ✅ NEW
 }
 
-// ✅ UPDATED: Enhanced interface with new mileage data
 interface VehicleWithMileage extends Vehicle {
   monthlyMileage: number;
   rideCount: number;
@@ -49,7 +50,6 @@ interface VehicleWithMileage extends Vehicle {
   lastUpdated: string | null;
 }
 
-// ✅ NEW: Mileage summary interface
 interface MileageSummary {
   totalVehicles: number;
   totalMileage: number;
@@ -112,6 +112,7 @@ interface Device {
   lastMessage: string;
   expire: string;
   isAvailable: boolean;
+  vehicleStatus?: 'available' | 'assigned' | 'busy'; // ✅ NEW
 }
 
 interface LiveRide extends Ride {
@@ -136,6 +137,7 @@ interface MileageHistory {
   }>;
 }
 
+
 export default function AdminDashboard() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [liveRides, setLiveRides] = useState<LiveRide[]>([]);
@@ -143,7 +145,7 @@ export default function AdminDashboard() {
   const [drivers, setDrivers] = useState<User[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [vehicleMileages, setVehicleMileages] = useState<VehicleWithMileage[]>([]);
-  const [mileageSummary, setMileageSummary] = useState<MileageSummary | null>(null); // ✅ NEW
+  const [mileageSummary, setMileageSummary] = useState<MileageSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [liveLoading, setLiveLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('rides');
@@ -158,12 +160,10 @@ export default function AdminDashboard() {
     role: 'driver'
   });
   
-  // Mileage history modal
   const [showMileageHistory, setShowMileageHistory] = useState(false);
   const [selectedVehicleHistory, setSelectedVehicleHistory] = useState<MileageHistory[]>([]);
   const [selectedVehicleName, setSelectedVehicleName] = useState('');
 
-  // Vehicle management states
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [newVehicle, setNewVehicle] = useState({
     terminalId: '',
@@ -171,9 +171,16 @@ export default function AdminDashboard() {
     vehicleType: ''
   });
 
-  useEffect(() => {
+useEffect(() => {
+  fetchData();
+}, []);
+
+// ✅ Separate useEffect for manual refresh on tab change
+useEffect(() => {
+  if (activeTab === 'users' || activeTab === 'vehicles' || activeTab === 'rides') {
     fetchData();
-  }, []);
+  }
+}, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'tracking') {
@@ -183,7 +190,6 @@ export default function AdminDashboard() {
     }
   }, [activeTab]);
 
-  // ✅ UPDATED: New efficient mileage fetching function
   const fetchVehicleMileages = async () => {
     try {
       const response = await fetch('/api/vehicles/mileage-summary');
@@ -198,7 +204,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // ✅ UPDATED: Streamlined fetchData function
   const fetchData = async () => {
     try {
       const [ridesRes, usersRes, devicesRes] = await Promise.all([
@@ -223,7 +228,6 @@ export default function AdminDashboard() {
         setDevices(devicesData);
       }
 
-      // ✅ NEW: Efficient single API call for all vehicle mileages
       await fetchVehicleMileages();
       
     } catch (error) {
@@ -248,53 +252,38 @@ export default function AdminDashboard() {
     }
   };
 
-
-
-
-// ✅ ADD this deleteUser function to your AdminDashboard component
-
-const deleteUser = async (userId: string, userName: string, userEmail: string, userRole: string) => {
-  // Confirmation dialog
-  const confirmMessage = `Are you sure you want to delete user "${userName}" (${userEmail})?\n\nRole: ${userRole}\n\nThis action cannot be undone.`;
-  
-  if (!confirm(confirmMessage)) {
-    return;
-  }
-  
-  // Additional confirmation for admin users
-  if (userRole === 'admin') {
-    const adminConfirm = confirm(`⚠️ WARNING: You are about to delete an ADMIN user!\n\nUser: ${userName}\nEmail: ${userEmail}\n\nThis will permanently remove their admin access. Are you absolutely sure?`);
-    if (!adminConfirm) {
+    const deleteUser = async (userId: string, userName: string, userEmail: string, userRole: string) => {
+    const confirmMessage = `Are you sure you want to delete user "${userName}" (${userEmail})?\n\nRole: ${userRole}\n\nThis action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) {
       return;
     }
-  }
-
-  try {
-    const response = await fetch(`/api/users?id=${userId}`, {
-      method: 'DELETE',
-    });
-
-    if (response.ok) {
-      const result = await response.json();
-      alert(`✅ User "${result.deletedUser.name}" deleted successfully!`);
-      fetchData(); // Refresh the data
-    } else {
-      const error = await response.json();
-      alert(`Failed to delete user: ${error.error || 'Unknown error'}`);
+    
+    if (userRole === 'admin') {
+      const adminConfirm = confirm(`⚠️ WARNING: You are about to delete an ADMIN user!\n\nUser: ${userName}\nEmail: ${userEmail}\n\nThis will permanently remove their admin access. Are you absolutely sure?`);
+      if (!adminConfirm) {
+        return;
+      }
     }
-  } catch (error) {
-    console.error('Failed to delete user:', error);
-    alert('Error deleting user. Please try again.');
-  }
-};
 
+    try {
+      const response = await fetch(`/api/users?id=${userId}`, {
+        method: 'DELETE',
+      });
 
-
-
-
-
-
-
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ User "${result.deletedUser.name}" deleted successfully!`);
+        fetchData();
+      } else {
+        const error = await response.json();
+        alert(`Failed to delete user: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      alert('Error deleting user. Please try again.');
+    }
+  };
 
   const fetchMileageHistory = async (vehicleId: string, vehicleName: string) => {
     try {
@@ -387,7 +376,7 @@ const deleteUser = async (userId: string, userName: string, userEmail: string, u
       });
 
       if (response.ok) {
-        alert('✅ Driver and vehicle assigned! Notifications sent to user and PM.');
+        alert('✅ Driver and vehicle assigned! Notifications sent to user, driver, and PM.');
         setAssignmentData(prev => {
           const newData = { ...prev };
           delete newData[rideId];
@@ -423,12 +412,17 @@ const deleteUser = async (userId: string, userName: string, userEmail: string, u
       });
 
       if (response.ok) {
+        alert('✅ User created successfully!');
         setIsCreateUserOpen(false);
         setNewUser({ name: '', email: '', password: '', role: 'driver' });
         fetchData();
+      } else {
+        const error = await response.json();
+        alert('Failed to create user: ' + (error.error || 'Unknown error'));
       }
     } catch (error) {
       console.error('Failed to create user:', error);
+      alert('Error creating user');
     }
   };
 
@@ -480,6 +474,42 @@ const deleteUser = async (userId: string, userName: string, userEmail: string, u
     } catch (error) {
       console.error('Failed to delete vehicle:', error);
       alert('Error deleting vehicle');
+    }
+  };
+
+  // ✅ NEW: Helper function to get driver status badge
+  const getDriverStatusBadge = (user: User) => {
+    if (user.role !== 'driver') {
+      return <Badge variant="outline">Active</Badge>;
+    }
+
+    const status = user.driverStatus || 'available';
+    
+    switch (status) {
+      case 'available':
+        return <Badge className="bg-green-100 text-green-800">Available</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+      case 'busy':
+        return <Badge className="bg-red-100 text-red-800">Busy</Badge>;
+      default:
+        return <Badge className="bg-green-100 text-green-800">Available</Badge>;
+    }
+  };
+
+  // ✅ NEW: Helper function to get vehicle status badge with detailed info
+  const getVehicleAvailabilityBadge = (vehicle: Device) => {
+    const status = vehicle.vehicleStatus || 'available';
+    
+    switch (status) {
+      case 'available':
+        return <Badge className="bg-green-100 text-green-800">Available</Badge>;
+      case 'assigned':
+        return <Badge className="bg-yellow-100 text-yellow-800">Assigned - Not in Use</Badge>;
+      case 'busy':
+        return <Badge className="bg-red-100 text-red-800">Busy</Badge>;
+      default:
+        return <Badge className="bg-green-100 text-green-800">Available</Badge>;
     }
   };
 
@@ -537,22 +567,55 @@ const deleteUser = async (userId: string, userName: string, userEmail: string, u
     return months[month - 1] || 'Unknown';
   };
 
-  // ✅ UPDATED: Show <25km rides awaiting admin approval
+  // ✅ UPDATED: Filter logic for available drivers and vehicles
   const pendingRides = rides.filter(ride => ride.status === 'awaiting_admin');
   const approvedRides = rides.filter(ride => ride.status === 'approved');
   const completedRides = rides.filter(ride => ['completed', 'rejected'].includes(ride.status));
-  const availableDevices = devices.filter(device => device.isAvailable && device.status === 'online');
-  const availableDrivers = drivers.filter(driver => driver.isAvailable !== false);
   
-  // ✅ UPDATED: Use mileage summary data when available
+  // ✅ NEW: Only show drivers that are AVAILABLE (not pending or busy)
+  const availableDrivers = drivers.filter(driver => 
+    driver.driverStatus === 'available' || !driver.driverStatus
+  );
+  
+  // ✅ NEW: Only show vehicles that are AVAILABLE (not assigned or busy)
+  const availableDevices = devices.filter(device => 
+    (device.vehicleStatus === 'available' || !device.vehicleStatus) && 
+    device.status === 'online'
+  );
+  
   const totalMonthlyMileage = mileageSummary?.totalMileage || vehicleMileages.reduce((sum, v) => sum + v.monthlyMileage, 0);
 
-  return (
+    return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <div className="flex gap-3">
+<div className="flex justify-between items-center">
+  <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+  <div className="flex gap-3">
+    {/* ✅ ADD THIS REFRESH BUTTON */}
+    <Button 
+      onClick={() => {
+        console.log('🔄 Manual refresh clicked');
+        fetchData();
+      }}
+      variant="outline"
+      className="flex items-center gap-2"
+    >
+      <RefreshCw className="w-4 h-4" />
+      Refresh
+    </Button>
+    
+    {activeTab === 'tracking' && (
+      <Button 
+        onClick={fetchLiveRides} 
+        variant="outline" 
+        size="sm"
+        disabled={liveLoading}
+        className="flex items-center gap-2"
+      >
+        <RefreshCw className={`w-4 h-4 ${liveLoading ? 'animate-spin' : ''}`} />
+        Refresh
+      </Button>
+    )}
             {activeTab === 'tracking' && (
               <Button 
                 onClick={fetchLiveRides} 
@@ -629,7 +692,7 @@ const deleteUser = async (userId: string, userName: string, userEmail: string, u
           </div>
         </div>
 
-        {/* ✅ ENHANCED: Statistics Cards with Summary Data */}
+        {/* Statistics Cards */}
         <div className="grid md:grid-cols-7 gap-4">
           <Card>
             <CardHeader className="pb-3">
@@ -656,6 +719,7 @@ const deleteUser = async (userId: string, userName: string, userEmail: string, u
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{drivers.length}</div>
+              <p className="text-xs text-gray-500">{availableDrivers.length} available</p>
             </CardContent>
           </Card>
           
@@ -665,8 +729,9 @@ const deleteUser = async (userId: string, userName: string, userEmail: string, u
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {mileageSummary?.availableVehicles || availableDevices.length}
+                {availableDevices.length}
               </div>
+              <p className="text-xs text-gray-500">out of {devices.length}</p>
             </CardContent>
           </Card>
           
@@ -718,7 +783,7 @@ const deleteUser = async (userId: string, userName: string, userEmail: string, u
           </Card>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs Navigation */}
         <div className="border-b">
           <div className="flex space-x-8">
             <button
@@ -789,7 +854,566 @@ const deleteUser = async (userId: string, userName: string, userEmail: string, u
           </div>
         </div>
 
-        {/* Live Tracking Tab */}
+                {/* Ride Management Tab */}
+        {activeTab === 'rides' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Rides Awaiting Admin Approval</CardTitle>
+                <CardDescription>
+                  {pendingRides.length} short-distance rides (&lt;25km) need your approval
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pendingRides.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No rides pending approval (only &lt;25km rides appear here)</p>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingRides.map((ride) => (
+                      <div key={ride._id} className="border rounded-lg p-4 border-l-4 border-l-orange-500">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h4 className="font-medium">Ride #{ride._id.slice(-6)}</h4>
+                            {getTripTypeBadge(ride.tripType)}
+                            <Badge className="bg-orange-100 text-orange-800">
+                              Short Distance: {ride.distanceKm.toFixed(1)} km
+                            </Badge>
+                            <p className="text-sm text-gray-600">
+                              {new Date(ride.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {getStatusBadge(ride.status)}
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-3 mb-3">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-green-600" />
+                            <span className="text-sm">{ride.startLocation.address}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-red-600" />
+                            <span className="text-sm">{ride.endLocation.address}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => approveRide(ride._id)}>
+                            <Check className="w-3 h-3 mr-1" />
+                            Approve
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => rejectRide(ride._id)}>
+                            <X className="w-3 h-3 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Approved Rides - Driver & Vehicle Assignment</CardTitle>
+                <CardDescription>
+                  {approvedRides.length} approved rides need driver and vehicle assignment
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {approvedRides.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No approved rides awaiting assignment</p>
+                ) : (
+                  <div className="space-y-4">
+                    {approvedRides.map((ride) => (
+                      <div key={ride._id} className="border rounded-lg p-4 border-l-4 border-l-green-500">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h4 className="font-medium">Ride #{ride._id.slice(-6)}</h4>
+                            {getTripTypeBadge(ride.tripType)}
+                            <Badge className={ride.distanceKm <= 25 ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}>
+                              {ride.distanceKm.toFixed(1)} km {ride.distanceKm <= 25 ? '(Short)' : '(Long)'}
+                            </Badge>
+                            <p className="text-sm text-gray-600">
+                              {new Date(ride.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {getStatusBadge(ride.status)}
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-3 mb-3">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-green-600" />
+                            <span className="text-sm">{ride.startLocation.address}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-red-600" />
+                            <span className="text-sm">{ride.endLocation.address}</span>
+                          </div>
+                        </div>
+                        
+                        {/* ✅ UPDATED: Assignment dropdowns with better messaging */}
+                        <div className="space-y-3">
+                          <div className="flex gap-3 items-center flex-wrap">
+                            <Select 
+                              onValueChange={(driverId) => updateAssignment(ride._id, 'driverId', driverId)}
+                              value={assignmentData[ride._id]?.driverId || ''}
+                            >
+                              <SelectTrigger className="w-64">
+                                <SelectValue placeholder="Select available driver" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableDrivers.length === 0 ? (
+                                  <div className="p-2 text-sm text-gray-500">No available drivers</div>
+                                ) : (
+                                  availableDrivers.map((driver) => (
+                                    <SelectItem key={driver._id} value={driver._id}>
+                                      <div className="flex items-center gap-2">
+                                        <UserCheck className="w-4 h-4 text-green-600" />
+                                        {driver.name}
+                                        <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-700">
+                                          Available
+                                        </Badge>
+                                      </div>
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                            
+                            <Select 
+                              onValueChange={(vehicleId) => updateAssignment(ride._id, 'vehicleId', vehicleId)}
+                              value={assignmentData[ride._id]?.vehicleId || ''}
+                            >
+                              <SelectTrigger className="w-64">
+                                <SelectValue placeholder="Select available vehicle" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableDevices.length === 0 ? (
+                                  <div className="p-2 text-sm text-gray-500">No available vehicles</div>
+                                ) : (
+                                  availableDevices.map((device) => (
+                                    <SelectItem key={device._id} value={device.terminalId}>
+                                      <div className="flex items-center gap-2">
+                                        <Car className="w-4 h-4 text-green-600" />
+                                        {device.vehicle} ({device.vehicleType})
+                                        <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-700">
+                                          Available
+                                        </Badge>
+                                      </div>
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                            
+                            <Button 
+                              size="sm" 
+                              onClick={() => assignDriverAndVehicle(ride._id)}
+                              disabled={!assignmentData[ride._id]?.driverId || !assignmentData[ride._id]?.vehicleId}
+                            >
+                              <Check className="w-3 h-3 mr-1" />
+                              Assign
+                            </Button>
+                          </div>
+                          
+                          {/* ✅ NEW: Show warning if no drivers/vehicles available */}
+                          {(availableDrivers.length === 0 || availableDevices.length === 0) && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                              <p className="text-sm text-yellow-800">
+                                ⚠️ {availableDrivers.length === 0 && 'No available drivers. '}
+                                {availableDevices.length === 0 && 'No available vehicles. '}
+                                All resources are currently busy or assigned.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ✅ UPDATED: User Management Tab with Driver Status */}
+        {activeTab === 'users' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>User Management</CardTitle>
+              <CardDescription>
+                Manage drivers, project managers, and admin users
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.filter(user => user.role !== 'user').map((user) => (
+                    <TableRow key={user._id}>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={
+                          user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                          user.role === 'project_manager' ? 'bg-blue-100 text-blue-800' :
+                          'bg-green-100 text-green-800'
+                        }>
+                          {user.role.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {/* ✅ NEW: Show detailed driver status */}
+                        {getDriverStatusBadge(user)}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-500">
+                        {new Date(user.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            className="opacity-50"
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            View
+                          </Button>
+                          
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteUser(user._id, user.name, user.email, user.role)}
+                            className="hover:bg-red-600"
+                          >
+                            <X className="w-3 h-3 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {users.filter(user => user.role !== 'user').length === 0 && (
+                <div className="text-center py-8">
+                  <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-600 mb-2">No staff users found</h3>
+                  <p className="text-gray-500">Create your first driver or project manager account</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+
+                {/* ✅ UPDATED: Vehicle Management Tab with Detailed Status */}
+        {activeTab === 'vehicles' && (
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Vehicle Management</CardTitle>
+                  <CardDescription>
+                    Add, view, and manage vehicles with real-time availability status
+                  </CardDescription>
+                </div>
+                <Dialog open={showAddVehicle} onOpenChange={setShowAddVehicle}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Vehicle
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Vehicle</DialogTitle>
+                      <DialogDescription>
+                        Enter vehicle details to add to the fleet
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="terminalId">Terminal ID</Label>
+                        <Input
+                          id="terminalId"
+                          placeholder="e.g., TERM001"
+                          value={newVehicle.terminalId}
+                          onChange={(e) => setNewVehicle({ ...newVehicle, terminalId: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="vehicle">Vehicle Name</Label>
+                        <Input
+                          id="vehicle"
+                          placeholder="e.g., Toyota Hiace"
+                          value={newVehicle.vehicle}
+                          onChange={(e) => setNewVehicle({ ...newVehicle, vehicle: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="vehicleType">Vehicle Type</Label>
+                        <Select 
+                          value={newVehicle.vehicleType} 
+                          onValueChange={(value) => setNewVehicle({ ...newVehicle, vehicleType: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Van">Van</SelectItem>
+                            <SelectItem value="Car">Car</SelectItem>
+                            <SelectItem value="Truck">Truck</SelectItem>
+                            <SelectItem value="Bus">Bus</SelectItem>
+                            <SelectItem value="SUV">SUV</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button onClick={addVehicle} className="w-full">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Vehicle
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Terminal ID</TableHead>
+                    <TableHead>Vehicle Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>System Status</TableHead>
+                    <TableHead>Availability</TableHead>
+                    <TableHead>Speed</TableHead>
+                    <TableHead>Last Update</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {devices.map((device) => (
+                    <TableRow key={device._id}>
+                      <TableCell className="font-medium">
+                        <Badge variant="outline">{device.terminalId}</Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">{device.vehicle}</TableCell>
+                      <TableCell>{device.vehicleType}</TableCell>
+                      <TableCell>
+                        {/* System online/offline status */}
+                        {getVehicleStatusBadge(device.status)}
+                      </TableCell>
+                      <TableCell>
+                        {/* ✅ NEW: Detailed availability status */}
+                        {getVehicleAvailabilityBadge(device)}
+                      </TableCell>
+                      <TableCell>{device.speed} km/h</TableCell>
+                      <TableCell className="text-xs text-gray-500">{device.lastMessage}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteVehicle(device._id, device.vehicle)}
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          Delete
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {/* ✅ NEW: Vehicle status legend */}
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="text-sm font-semibold mb-3 text-gray-700">Vehicle Status Guide:</h4>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-100 text-green-800">Available</Badge>
+                    <span className="text-gray-600">Ready for assignment</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-yellow-100 text-yellow-800">Assigned - Not in Use</Badge>
+                    <span className="text-gray-600">Assigned but not started</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-red-100 text-red-800">Busy</Badge>
+                    <span className="text-gray-600">Currently on a ride</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Vehicle Mileage Tab */}
+        {activeTab === 'mileage' && (
+          <div className="space-y-6">
+            {/* Summary Cards */}
+            {mileageSummary && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">Total Fleet Mileage</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {mileageSummary.totalMileage.toFixed(1)} km
+                    </div>
+                    <p className="text-xs text-purple-600">This Month</p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">Active Vehicles</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {mileageSummary.activeVehicles}
+                    </div>
+                    <p className="text-xs text-gray-500">Out of {mileageSummary.totalVehicles}</p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">Average Mileage</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {mileageSummary.totalVehicles > 0 ? (mileageSummary.totalMileage / mileageSummary.totalVehicles).toFixed(1) : '0'} km
+                    </div>
+                    <p className="text-xs text-gray-500">Per Vehicle</p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">Available Now</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {mileageSummary.availableVehicles}
+                    </div>
+                    <p className="text-xs text-gray-500">Ready for rides</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Vehicle Mileage Table */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Gauge className="w-5 h-5 text-purple-600" />
+                      Vehicle Mileage Tracking
+                    </CardTitle>
+                    <CardDescription>
+                      Current month mileage for each vehicle - {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={fetchVehicleMileages}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Refresh Mileage
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Vehicle</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Terminal ID</TableHead>
+                      <TableHead>System Status</TableHead>
+                      <TableHead>Availability</TableHead>
+                      <TableHead>Monthly Mileage</TableHead>
+                      <TableHead>Ride Breakdown</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {vehicleMileages
+                      .sort((a, b) => b.monthlyMileage - a.monthlyMileage)
+                      .map((vehicle) => (
+                      <TableRow key={vehicle._id}>
+                        <TableCell className="font-medium">{vehicle.vehicle}</TableCell>
+                        <TableCell>{vehicle.vehicleType}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{vehicle.terminalId}</Badge>
+                        </TableCell>
+                        <TableCell>{getVehicleStatusBadge(vehicle.status)}</TableCell>
+                        <TableCell>
+                          {/* ✅ NEW: Show detailed availability in mileage tab too */}
+                          {getVehicleAvailabilityBadge(vehicle)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Gauge className="w-4 h-4 text-purple-600" />
+                            <span className="font-bold text-purple-600 text-lg">
+                              {vehicle.monthlyMileage.toFixed(1)} km
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {vehicle.rideCount || 0} total rides
+                              </Badge>
+                            </div>
+                            {vehicle.rideCount > 0 && (
+                              <div className="text-gray-500">
+                                <div>👤 {vehicle.userRideCount || 0} user rides</div>
+                                <div>🚌 {vehicle.dailyRideCount || 0} daily rides</div>
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchMileageHistory(vehicle.terminalId, vehicle.vehicle)}
+                            className="flex items-center gap-1"
+                          >
+                            <BarChart3 className="w-3 h-3" />
+                            History
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+
+                {/* Live Tracking Tab */}
         {activeTab === 'tracking' && (
           <div className="space-y-6">
             <Card>
@@ -940,522 +1564,6 @@ const deleteUser = async (userId: string, userName: string, userEmail: string, u
           </div>
         )}
 
-        {/* Ride Management Tab */}
-        {activeTab === 'rides' && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Rides Awaiting Admin Approval</CardTitle>
-                <CardDescription>
-                  {pendingRides.length} short-distance rides (&lt;25km) need your approval
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {pendingRides.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No rides pending approval (only &lt;25km rides appear here)</p>
-                ) : (
-                  <div className="space-y-4">
-                    {pendingRides.map((ride) => (
-                      <div key={ride._id} className="border rounded-lg p-4 border-l-4 border-l-orange-500">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <h4 className="font-medium">Ride #{ride._id.slice(-6)}</h4>
-                            {getTripTypeBadge(ride.tripType)}
-                            <Badge className="bg-orange-100 text-orange-800">
-                              Short Distance: {ride.distanceKm.toFixed(1)} km
-                            </Badge>
-                            <p className="text-sm text-gray-600">
-                              {new Date(ride.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          {getStatusBadge(ride.status)}
-                        </div>
-                        <div className="grid md:grid-cols-2 gap-3 mb-3">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-green-600" />
-                            <span className="text-sm">{ride.startLocation.address}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-red-600" />
-                            <span className="text-sm">{ride.endLocation.address}</span>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => approveRide(ride._id)}>
-                            <Check className="w-3 h-3 mr-1" />
-                            Approve
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => rejectRide(ride._id)}>
-                            <X className="w-3 h-3 mr-1" />
-                            Reject
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Approved Rides - Driver & Vehicle Assignment</CardTitle>
-                <CardDescription>
-                  {approvedRides.length} approved rides need driver and vehicle assignment
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {approvedRides.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No approved rides awaiting assignment</p>
-                ) : (
-                  <div className="space-y-4">
-                    {approvedRides.map((ride) => (
-                      <div key={ride._id} className="border rounded-lg p-4 border-l-4 border-l-green-500">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <h4 className="font-medium">Ride #{ride._id.slice(-6)}</h4>
-                            {getTripTypeBadge(ride.tripType)}
-                            <Badge className={ride.distanceKm <= 25 ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}>
-                              {ride.distanceKm.toFixed(1)} km {ride.distanceKm <= 25 ? '(Short)' : '(Long)'}
-                            </Badge>
-                            <p className="text-sm text-gray-600">
-                              {new Date(ride.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          {getStatusBadge(ride.status)}
-                        </div>
-                        <div className="grid md:grid-cols-2 gap-3 mb-3">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-green-600" />
-                            <span className="text-sm">{ride.startLocation.address}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-red-600" />
-                            <span className="text-sm">{ride.endLocation.address}</span>
-                          </div>
-                        </div>
-                        <div className="flex gap-3 items-center flex-wrap">
-                          <Select onValueChange={(driverId) => updateAssignment(ride._id, 'driverId', driverId)}>
-                            <SelectTrigger className="w-48">
-                              <SelectValue placeholder="Select driver" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableDrivers.map((driver) => (
-                                <SelectItem key={driver._id} value={driver._id}>
-                                  <div className="flex items-center gap-2">
-                                    <UserCheck className="w-4 h-4" />
-                                    {driver.name}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          
-                          <Select onValueChange={(vehicleId) => updateAssignment(ride._id, 'vehicleId', vehicleId)}>
-                            <SelectTrigger className="w-48">
-                              <SelectValue placeholder="Select vehicle" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableDevices.map((device) => (
-                                <SelectItem key={device._id} value={device.terminalId}>
-                                  <div className="flex items-center gap-2">
-                                    <Car className="w-4 h-4" />
-                                    {device.vehicle} ({device.vehicleType})
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          
-                          <Button 
-                            size="sm" 
-                            onClick={() => assignDriverAndVehicle(ride._id)}
-                            disabled={!assignmentData[ride._id]?.driverId || !assignmentData[ride._id]?.vehicleId}
-                          >
-                            Assign
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-{/* Users Tab */}
-{activeTab === 'users' && (
-  <Card>
-    <CardHeader>
-      <CardTitle>User Management</CardTitle>
-      <CardDescription>
-        Manage drivers, project managers, and admin users
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.filter(user => user.role !== 'user').map((user) => (
-            <TableRow key={user._id}>
-              <TableCell className="font-medium">{user.name}</TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>
-                <Badge variant="outline" className={
-                  user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                  user.role === 'project_manager' ? 'bg-blue-100 text-blue-800' :
-                  'bg-green-100 text-green-800'
-                }>
-                  {user.role.replace('_', ' ')}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                {user.role === 'driver' && (
-                  user.isAvailable !== false ? (
-                    <Badge className="bg-green-100 text-green-800">Available</Badge>
-                  ) : (
-                    <Badge className="bg-yellow-100 text-yellow-800">Busy</Badge>
-                  )
-                )}
-                {user.role !== 'driver' && (
-                  <Badge variant="outline">Active</Badge>
-                )}
-              </TableCell>
-              <TableCell className="text-sm text-gray-500">
-                {new Date(user.createdAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric'
-                })}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  {/* Edit button (placeholder for future functionality) */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    className="opacity-50"
-                  >
-                    <Eye className="w-3 h-3 mr-1" />
-                    View
-                  </Button>
-                  
-                  {/* Delete button */}
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => deleteUser(user._id, user.name, user.email, user.role)}
-                    className="hover:bg-red-600"
-                  >
-                    <X className="w-3 h-3 mr-1" />
-                    Delete
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      
-      {/* Show message if no users */}
-      {users.filter(user => user.role !== 'user').length === 0 && (
-        <div className="text-center py-8">
-          <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-600 mb-2">No staff users found</h3>
-          <p className="text-gray-500">Create your first driver or project manager account</p>
-        </div>
-      )}
-    </CardContent>
-  </Card>
-)}
-
-        {/* Vehicle Management Tab */}
-        {activeTab === 'vehicles' && (
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Vehicle Management</CardTitle>
-                  <CardDescription>
-                    Add, view, and manage vehicles
-                  </CardDescription>
-                </div>
-                <Dialog open={showAddVehicle} onOpenChange={setShowAddVehicle}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Vehicle
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add New Vehicle</DialogTitle>
-                      <DialogDescription>
-                        Enter vehicle details to add to the fleet
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="terminalId">Terminal ID</Label>
-                        <Input
-                          id="terminalId"
-                          placeholder="e.g., TERM001"
-                          value={newVehicle.terminalId}
-                          onChange={(e) => setNewVehicle({ ...newVehicle, terminalId: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="vehicle">Vehicle Name</Label>
-                        <Input
-                          id="vehicle"
-                          placeholder="e.g., Toyota Hiace"
-                          value={newVehicle.vehicle}
-                          onChange={(e) => setNewVehicle({ ...newVehicle, vehicle: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="vehicleType">Vehicle Type</Label>
-                        <Select 
-                          value={newVehicle.vehicleType} 
-                          onValueChange={(value) => setNewVehicle({ ...newVehicle, vehicleType: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Van">Van</SelectItem>
-                            <SelectItem value="Car">Car</SelectItem>
-                            <SelectItem value="Truck">Truck</SelectItem>
-                            <SelectItem value="Bus">Bus</SelectItem>
-                            <SelectItem value="SUV">SUV</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button onClick={addVehicle} className="w-full">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Vehicle
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Terminal ID</TableHead>
-                    <TableHead>Vehicle Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Availability</TableHead>
-                    <TableHead>Speed</TableHead>
-                    <TableHead>Last Update</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {devices.map((device) => (
-                    <TableRow key={device._id}>
-                      <TableCell className="font-medium">
-                        <Badge variant="outline">{device.terminalId}</Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{device.vehicle}</TableCell>
-                      <TableCell>{device.vehicleType}</TableCell>
-                      <TableCell>{getVehicleStatusBadge(device.status)}</TableCell>
-                      <TableCell>
-                        {device.isAvailable ? (
-                          <Badge className="bg-green-100 text-green-800">Available</Badge>
-                        ) : (
-                          <Badge className="bg-red-100 text-red-800">In Use</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>{device.speed} km/h</TableCell>
-                      <TableCell className="text-xs text-gray-500">{device.lastMessage}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => deleteVehicle(device._id, device.vehicle)}
-                        >
-                          <X className="w-3 h-3 mr-1" />
-                          Delete
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* ✅ ENHANCED: Vehicle Mileage Tab with Summary */}
-        {activeTab === 'mileage' && (
-          <div className="space-y-6">
-            {/* Enhanced Summary Cards */}
-            {mileageSummary && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600">Total Fleet Mileage</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-purple-600">
-                      {mileageSummary.totalMileage.toFixed(1)} km
-                    </div>
-                    <p className="text-xs text-purple-600">This Month</p>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600">Active Vehicles</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-green-600">
-                      {mileageSummary.activeVehicles}
-                    </div>
-                    <p className="text-xs text-gray-500">Out of {mileageSummary.totalVehicles}</p>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600">Average Mileage</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-blue-600">
-                      {mileageSummary.totalVehicles > 0 ? (mileageSummary.totalMileage / mileageSummary.totalVehicles).toFixed(1) : '0'} km
-                    </div>
-                    <p className="text-xs text-gray-500">Per Vehicle</p>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600">Available Now</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-green-600">
-                      {mileageSummary.availableVehicles}
-                    </div>
-                    <p className="text-xs text-gray-500">Ready for rides</p>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {/* Enhanced Vehicle Mileage Table */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Gauge className="w-5 h-5 text-purple-600" />
-                      Vehicle Mileage Tracking
-                    </CardTitle>
-                    <CardDescription>
-                      Current month mileage for each vehicle - {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                    </CardDescription>
-                  </div>
-                  <Button
-                    onClick={fetchVehicleMileages}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Refresh Mileage
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Vehicle</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Terminal ID</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Availability</TableHead>
-                      <TableHead>Monthly Mileage</TableHead>
-                      <TableHead>Ride Breakdown</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {vehicleMileages
-                      .sort((a, b) => b.monthlyMileage - a.monthlyMileage) // Sort by highest mileage first
-                      .map((vehicle) => (
-                      <TableRow key={vehicle._id}>
-                        <TableCell className="font-medium">{vehicle.vehicle}</TableCell>
-                        <TableCell>{vehicle.vehicleType}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{vehicle.terminalId}</Badge>
-                        </TableCell>
-                        <TableCell>{getVehicleStatusBadge(vehicle.status)}</TableCell>
-                        <TableCell>
-                          {vehicle.isAvailable ? (
-                            <Badge className="bg-green-100 text-green-800">Available</Badge>
-                          ) : (
-                            <Badge className="bg-red-100 text-red-800">In Use</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Gauge className="w-4 h-4 text-purple-600" />
-                            <span className="font-bold text-purple-600 text-lg">
-                              {vehicle.monthlyMileage.toFixed(1)} km
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-xs space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="text-xs">
-                                {vehicle.rideCount || 0} total rides
-                              </Badge>
-                            </div>
-                            {vehicle.rideCount > 0 && (
-                              <div className="text-gray-500">
-                                <div>👤 {vehicle.userRideCount || 0} user rides</div>
-                                <div>🚌 {vehicle.dailyRideCount || 0} daily rides</div>
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => fetchMileageHistory(vehicle.terminalId, vehicle.vehicle)}
-                            className="flex items-center gap-1"
-                          >
-                            <BarChart3 className="w-3 h-3" />
-                            History
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
         {/* History Tab */}
         {activeTab === 'history' && (
           <Card>
@@ -1536,7 +1644,7 @@ const deleteUser = async (userId: string, userName: string, userEmail: string, u
           </Card>
         )}
 
-        {/* ✅ NEW: Mileage History Modal */}
+        {/* Mileage History Modal */}
         <Dialog open={showMileageHistory} onOpenChange={setShowMileageHistory}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
@@ -1587,137 +1695,6 @@ const deleteUser = async (userId: string, userName: string, userEmail: string, u
             </div>
           </DialogContent>
         </Dialog>
-
-
-
-
-
-        {/* ✅ NEW: Vehicle Management Tab */}
-        {activeTab === 'vehicles' && (
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Vehicle Management</CardTitle>
-                  <CardDescription>
-                    Add, view, and manage vehicles
-                  </CardDescription>
-                </div>
-                <Dialog open={showAddVehicle} onOpenChange={setShowAddVehicle}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Vehicle
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add New Vehicle</DialogTitle>
-                      <DialogDescription>
-                        Enter vehicle details to add to the fleet
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="terminalId">Terminal ID</Label>
-                        <Input
-                          id="terminalId"
-                          placeholder="e.g., TERM001"
-                          value={newVehicle.terminalId}
-                          onChange={(e) => setNewVehicle({ ...newVehicle, terminalId: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="vehicle">Vehicle Name</Label>
-                        <Input
-                          id="vehicle"
-                          placeholder="e.g., Toyota Hiace"
-                          value={newVehicle.vehicle}
-                          onChange={(e) => setNewVehicle({ ...newVehicle, vehicle: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="vehicleType">Vehicle Type</Label>
-                        <Select 
-                          value={newVehicle.vehicleType} 
-                          onValueChange={(value) => setNewVehicle({ ...newVehicle, vehicleType: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Van">Van</SelectItem>
-                            <SelectItem value="Car">Car</SelectItem>
-                            <SelectItem value="Truck">Truck</SelectItem>
-                            <SelectItem value="Bus">Bus</SelectItem>
-                            <SelectItem value="SUV">SUV</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button onClick={addVehicle} className="w-full">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Vehicle
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Terminal ID</TableHead>
-                    <TableHead>Vehicle Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Availability</TableHead>
-                    <TableHead>Speed</TableHead>
-                    <TableHead>Last Update</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {devices.map((device) => (
-                    <TableRow key={device._id}>
-                      <TableCell className="font-medium">
-                        <Badge variant="outline">{device.terminalId}</Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{device.vehicle}</TableCell>
-                      <TableCell>{device.vehicleType}</TableCell>
-                      <TableCell>{getVehicleStatusBadge(device.status)}</TableCell>
-                      <TableCell>
-                        {device.isAvailable ? (
-                          <Badge className="bg-green-100 text-green-800">Available</Badge>
-                        ) : (
-                          <Badge className="bg-red-100 text-red-800">In Use</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>{device.speed} km/h</TableCell>
-                      <TableCell className="text-xs text-gray-500">{device.lastMessage}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => deleteVehicle(device._id, device.vehicle)}
-                        >
-                          <X className="w-3 h-3 mr-1" />
-                          Delete
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
-
-
-
-
-
-
 
         {/* Live Location Modal */}
         {selectedLiveRide && (

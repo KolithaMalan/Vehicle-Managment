@@ -1,4 +1,4 @@
-// app/api/rides/[id]/complete/route.ts - UPDATED
+// app/api/rides/[id]/complete/route.ts - COMPLETE UPDATED VERSION
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import { RideModel, DeviceModel, VehicleMileageModel, UserModel } from '@/lib/models';
@@ -55,7 +55,7 @@ export async function POST(
       ? parseFloat((endMileage - ride.startMileage).toFixed(2))
       : 0;
 
-    // Update ride
+    // ✅ 1. UPDATE RIDE STATUS
     ride.status = 'completed';
     ride.endMileage = endMileage;
     ride.totalMileage = totalMileage;
@@ -64,7 +64,7 @@ export async function POST(
 
     console.log(`✅ Ride completed - Start: ${ride.startMileage}, End: ${endMileage}, Total: ${totalMileage} km`);
 
-    // Update monthly vehicle mileage
+    // ✅ 2. UPDATE MONTHLY VEHICLE MILEAGE
     if (ride.vehicleId && totalMileage > 0) {
       await updateVehicleMileage({
         vehicleId: ride.vehicleId,
@@ -75,22 +75,28 @@ export async function POST(
       console.log(`✅ Vehicle mileage updated: +${totalMileage} km`);
     }
 
-    // Free up the vehicle
+    // ✅ 3. MARK VEHICLE AS AVAILABLE
     if (ride.vehicleId) {
       await DeviceModel.findOneAndUpdate(
         { terminalId: ride.vehicleId },
-        { isAvailable: true }
+        { 
+          isAvailable: true,
+          vehicleStatus: 'available' 
+        }
       );
-      console.log(`✅ Vehicle ${ride.vehicleId} marked as available`);
+      console.log(`✅ Vehicle ${ride.vehicleId} marked as AVAILABLE`);
     }
     
-    // ✅ NEW: Mark driver as available
+    // ✅ 4. MARK DRIVER AS AVAILABLE
     if (ride.driverId) {
       await UserModel.findByIdAndUpdate(
         ride.driverId,
-        { isAvailable: true }
+        { 
+          isAvailable: true,
+          driverStatus: 'available' 
+        }
       );
-      console.log(`✅ Driver ${ride.driverId} marked as available`);
+      console.log(`✅ Driver ${ride.driverId} marked as AVAILABLE`);
     }
     
     return NextResponse.json(ride);

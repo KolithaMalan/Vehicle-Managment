@@ -176,85 +176,117 @@ export default function DriverDashboard() {
     setShowMileageDialog(true);
   };
 
-  const submitMileageAndUpdateStatus = async () => {
-    if (!selectedRide || !mileageAction) return;
+const submitMileageAndUpdateStatus = async () => {
+  console.log('🔵 submitMileageAndUpdateStatus called');
+  console.log('🔵 selectedRide:', selectedRide?._id);
+  console.log('🔵 mileageAction:', mileageAction);
+  console.log('🔵 startMileage:', startMileage);
+  console.log('🔵 endMileage:', endMileage);
+  
+  if (!selectedRide || !mileageAction) {
+    console.log('❌ No selectedRide or mileageAction');
+    return;
+  }
 
-    if (mileageAction === 'start' && !startMileage) {
-      toast.error('Please enter starting mileage');
+  if (mileageAction === 'start' && !startMileage) {
+    console.log('❌ No start mileage');
+    toast.error('Please enter starting mileage');
+    return;
+  }
+
+  if (mileageAction === 'complete' && !endMileage) {
+    console.log('❌ No end mileage');
+    toast.error('Please enter ending mileage');
+    return;
+  }
+
+  const mileageValue = mileageAction === 'start' 
+    ? parseFloat(startMileage) 
+    : parseFloat(endMileage);
+
+  console.log('🔵 mileageValue:', mileageValue);
+
+  if (isNaN(mileageValue) || mileageValue <= 0) {
+    console.log('❌ Invalid mileage value');
+    toast.error('Please enter a valid mileage reading');
+    return;
+  }
+
+  if (mileageAction === 'complete' && selectedRide.startMileage) {
+    if (mileageValue <= selectedRide.startMileage) {
+      console.log('❌ End mileage not greater than start');
+      toast.error('End mileage must be greater than start mileage');
       return;
     }
+  }
 
-    if (mileageAction === 'complete' && !endMileage) {
-      toast.error('Please enter ending mileage');
-      return;
-    }
+  setUpdatingRide(selectedRide._id);
+  
+  try {
+    if (mileageAction === 'start') {
+      console.log('🔵 Starting ride API call...');
+      console.log('🔵 URL:', `/api/rides/${selectedRide._id}/start`);
+      console.log('🔵 Body:', JSON.stringify({ startMileage: mileageValue }));
+      
+      const response = await fetch(`/api/rides/${selectedRide._id}/start`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ startMileage: mileageValue }),
+        credentials: 'include' // ✅ IMPORTANT: Include cookies
+      });
 
-    const mileageValue = mileageAction === 'start' 
-      ? parseFloat(startMileage) 
-      : parseFloat(endMileage);
+      console.log('🔵 Response status:', response.status);
+      console.log('🔵 Response ok:', response.ok);
 
-    if (isNaN(mileageValue) || mileageValue <= 0) {
-      toast.error('Please enter a valid mileage reading');
-      return;
-    }
-
-    // Validate end mileage is greater than start mileage
-    if (mileageAction === 'complete' && selectedRide.startMileage) {
-      if (mileageValue <= selectedRide.startMileage) {
-        toast.error('End mileage must be greater than start mileage');
-        return;
-      }
-    }
-
-    setUpdatingRide(selectedRide._id);
-    
-    try {
-      if (mileageAction === 'start') {
-        // Start ride endpoint
-        const response = await fetch(`/api/rides/${selectedRide._id}/start`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ startMileage: mileageValue }),
-        });
-
-        if (response.ok) {
-          toast.success(`Ride started! Mileage: ${mileageValue} km`);
-          setShowMileageDialog(false);
-          setSelectedRide(null);
-          setMileageAction(null);
-          setStartMileage('');
-          await fetchData();
-        } else {
-          const errorData = await response.json();
-          toast.error(`Failed to start: ${errorData.error}`);
-        }
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Start ride success:', data);
+        toast.success(`Ride started! Mileage: ${mileageValue} km`);
+        setShowMileageDialog(false);
+        setSelectedRide(null);
+        setMileageAction(null);
+        setStartMileage('');
+        await fetchData();
       } else {
-        // Complete ride endpoint
-        const response = await fetch(`/api/rides/${selectedRide._id}/complete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ endMileage: mileageValue }),
-        });
-
-        if (response.ok) {
-          toast.success(`Ride completed! Final mileage: ${mileageValue} km`);
-          setShowMileageDialog(false);
-          setSelectedRide(null);
-          setMileageAction(null);
-          setEndMileage('');
-          await fetchData();
-        } else {
-          const errorData = await response.json();
-          toast.error(`Failed to complete: ${errorData.error}`);
-        }
+        const errorData = await response.json();
+        console.error('❌ Start ride failed:', errorData);
+        toast.error(`Failed to start: ${errorData.error}`);
       }
-    } catch (error) {
-      console.error('Failed to update ride:', error);
-      toast.error('Failed to update ride. Please try again.');
-    } finally {
-      setUpdatingRide(null);
+    } else {
+      console.log('🔵 Completing ride API call...');
+      const response = await fetch(`/api/rides/${selectedRide._id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endMileage: mileageValue }),
+        credentials: 'include' // ✅ IMPORTANT: Include cookies
+      });
+
+      console.log('🔵 Response status:', response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Complete ride success:', data);
+        toast.success(`Ride completed! Final mileage: ${mileageValue} km`);
+        setShowMileageDialog(false);
+        setSelectedRide(null);
+        setMileageAction(null);
+        setEndMileage('');
+        await fetchData();
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Complete ride failed:', errorData);
+        toast.error(`Failed to complete: ${errorData.error}`);
+      }
     }
-  };
+  } catch (error) {
+    console.error('❌❌❌ Failed to update ride:', error);
+    toast.error('Failed to update ride. Please try again.');
+  } finally {
+    setUpdatingRide(null);
+  }
+};
 
   const handleStartDailyRide = async () => {
     if (!dailyRideForm.vehicleId || !dailyRideForm.destination || !dailyRideForm.startMileage) {

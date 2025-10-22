@@ -1,4 +1,4 @@
-// lib/models.ts
+// lib/models.ts - COMPLETE VERSION
 
 import { User, Ride, Device, DailyRide, VehicleMileage } from './types';
 import mongoose, { Schema, model, models } from "mongoose";
@@ -12,7 +12,12 @@ const UserSchema = new mongoose.Schema<User>({
     enum: ['user', 'driver', 'project_manager', 'admin'], 
     required: true 
   },
-  isAvailable: { type: Boolean, default: true }, // ✅ NEW: Track driver availability
+  isAvailable: { type: Boolean, default: true },
+  driverStatus: { 
+    type: String, 
+    enum: ['available', 'pending', 'busy'], 
+    default: 'available' 
+  }, // ✅ NEW
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -70,7 +75,6 @@ const RideSchema = new mongoose.Schema<Ride>({
   createdAt: { type: Date, default: Date.now }
 });
 
-// NEW: Daily Ride Schema
 const DailyRideSchema = new mongoose.Schema<DailyRide>({
   driverId: { type: String, required: true },
   vehicleId: { type: String, required: true },
@@ -92,7 +96,6 @@ const DailyRideSchema = new mongoose.Schema<DailyRide>({
   createdAt: { type: Date, default: Date.now }
 });
 
-// NEW: Vehicle Mileage Schema
 const VehicleMileageSchema = new mongoose.Schema<VehicleMileage>({
   vehicleId: { type: String, required: true },
   month: { type: Number, required: true, min: 1, max: 12 },
@@ -113,7 +116,6 @@ const VehicleMileageSchema = new mongoose.Schema<VehicleMileage>({
   updatedAt: { type: Date, default: Date.now }
 });
 
-// Create compound index for vehicle + month + year
 VehicleMileageSchema.index({ vehicleId: 1, month: 1, year: 1 }, { unique: true });
 
 const DeviceSchema = new mongoose.Schema<Device>({
@@ -126,7 +128,12 @@ const DeviceSchema = new mongoose.Schema<Device>({
   speed: { type: Number, required: true },
   lastMessage: { type: String, required: true },
   expire: { type: String, required: true },
-  isAvailable: { type: Boolean, default: true }
+  isAvailable: { type: Boolean, default: true },
+  vehicleStatus: { 
+    type: String, 
+    enum: ['available', 'assigned', 'busy'], 
+    default: 'available' 
+  } // ✅ NEW
 });
 
 const NotificationSchema = new Schema(
